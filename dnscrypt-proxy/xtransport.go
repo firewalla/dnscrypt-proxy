@@ -101,6 +101,7 @@ type XTransport struct {
 	httpProxyFunction        func(*http.Request) (*url.URL, error)
 	tlsClientCreds           DOHClientCreds
 	keyLogWriter             io.Writer
+	markResolver             *fwmarkResolver
 }
 
 func NewXTransport() *XTransport {
@@ -324,6 +325,9 @@ func (xTransport *XTransport) rebuildTransport() {
 			dial := func(address string) (net.Conn, error) {
 				if xTransport.proxyDialer == nil {
 					dialer := &net.Dialer{Timeout: timeout, KeepAlive: xTransport.keepAlive, DualStack: true}
+					if xTransport.markResolver != nil {
+						dialer.Control = dialerControlForMark(xTransport.markResolver)
+					}
 					return dialer.DialContext(ctx, network, address)
 				}
 				return (*xTransport.proxyDialer).Dial(network, address)
@@ -479,7 +483,11 @@ func (xTransport *XTransport) rebuildTransport() {
 					}
 					continue
 				}
-				udpConn, err := net.ListenUDP(target.network, nil)
+				lc := net.ListenConfig{}
+				if xTransport.markResolver != nil {
+					lc.Control = dialerControlForMark(xTransport.markResolver)
+				}
+				udpConn, err := lc.ListenPacket(ctx, target.network, ":0")
 				if err != nil {
 					lastErr = err
 					if idx < len(targets)-1 {

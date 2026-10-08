@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -95,6 +96,11 @@ func configureXTransport(proxy *Proxy, config *Config) error {
 	proxy.xTransport.useIPv4 = config.SourceIPv4
 	proxy.xTransport.useIPv6 = config.SourceIPv6
 	proxy.xTransport.keepAlive = time.Duration(config.KeepAlive) * time.Second
+	// SO_MARK-based outgoing policy routing is Linux-only; elsewhere the
+	// resolver is never consulted, so it is not worth building one.
+	if runtime.GOOS == "linux" {
+		proxy.xTransport.markResolver = newFWMarkResolver()
+	}
 
 	// Configure HTTP proxy URL if specified
 	if len(config.HTTPProxyURL) > 0 {
@@ -129,6 +135,14 @@ func configureXTransport(proxy *Proxy, config *Config) error {
 		}
 		proxy.xTransport.proxyDialer = &proxyDialer
 		proxy.xTransport.mainProto = "tcp"
+		if proxy.xTransport.markResolver != nil {
+			// A SOCKS proxy replaces the dialer entirely, so no socket of ours
+			// is left to mark. Clear it so that every dial path is covered by
+			// this one check rather than each having to repeat it.
+			dlog.Warn("fwmark is ignored while a SOCKS proxy is configured")
+			_ = proxy.xTransport.markResolver.Close()
+			proxy.xTransport.markResolver = nil
+		}
 	}
 
 	proxy.xTransport.rebuildTransport()

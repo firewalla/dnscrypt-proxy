@@ -141,6 +141,22 @@ http3_probe = false
 # http_proxy = 'http://127.0.0.1:8888'
 
 
+## Outgoing fwmark (Linux only, no setting)
+## The sockets used for DoH queries (including HTTP/3) carry a mark (SO_MARK)
+## read from Redis on 127.0.0.1:6379: the key `dnscrypt:markkey` holds the
+## name of the key holding the numeric mark. Policy routing rules can then
+## steer those queries - e.g. send DoH through a VPN client instead of the
+## default route - and a mark that changes while the proxy runs is picked up
+## within 5 seconds, without a restart and without touching this file.
+## The mark has to fit in 31 bits. Setting SO_MARK requires the
+## CAP_NET_ADMIN capability. When no mark can be
+## read the sockets are left unmarked and the queries follow the default
+## route. Ignored when `proxy` is set.
+## Only DoH queries are marked: DNSCrypt-protocol servers, anonymized DNS
+## relays, forwarding rules and bootstrap/netprobe lookups keep using the
+## default route.
+
+
 ## How long a DNS query will wait for a response, in milliseconds.
 ## If you have a network with *a lot* of latency, you may need to
 ## increase this. Startup may be slower if you do so.
