@@ -2,8 +2,10 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net"
 	"net/netip"
 	"os"
@@ -13,6 +15,7 @@ import (
 
 	"codeberg.org/miekg/dns"
 	"codeberg.org/miekg/dns/rdata"
+	"github.com/BurntSushi/toml"
 )
 
 func resetControlState(t *testing.T) {
@@ -419,5 +422,24 @@ func TestControlFlushClient(t *testing.T) {
 	}
 	if code := Flush(socketPath(t), "example.com"); code != 1 {
 		t.Fatalf("an unreachable proxy must exit 1, got %d", code)
+	}
+}
+
+func TestControlSocketDefault(t *testing.T) {
+	cfg := newConfig()
+	if cfg.ControlSocket != DefaultControlSocket {
+		t.Fatalf("default control_socket %q, want %q", cfg.ControlSocket, DefaultControlSocket)
+	}
+	// a config without the key keeps the default, an empty value turns it off
+	if _, err := toml.Decode("cache = true\n", &cfg); err != nil || cfg.ControlSocket != DefaultControlSocket {
+		t.Fatalf("without the key: %q, %v", cfg.ControlSocket, err)
+	}
+	if _, err := toml.Decode("control_socket = ''\n", &cfg); err != nil || cfg.ControlSocket != "" {
+		t.Fatalf("control_socket = '': %q, %v", cfg.ControlSocket, err)
+	}
+	// a missing directory is reported as such, so the default can be skipped quietly
+	err := (&Proxy{}).startControl(t.TempDir() + "/missing/c.sock")
+	if !errors.Is(err, fs.ErrNotExist) {
+		t.Fatalf("missing directory: got %v", err)
 	}
 }

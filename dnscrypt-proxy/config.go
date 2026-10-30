@@ -117,6 +117,7 @@ func newConfig() Config {
 		LogLevel:        int(dlog.LogLevel()),
 		LogFileLatest:   true,
 		ListenAddresses: []string{"127.0.0.1:53"},
+		ControlSocket:   DefaultControlSocket,
 		LocalDoH:        LocalDoHConfig{Path: "/dns-query"},
 		MonitoringUI: MonitoringUIConfig{
 			Enabled:        false,
