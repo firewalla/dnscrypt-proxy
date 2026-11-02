@@ -34,6 +34,12 @@ import (
 // Replies are "ok <removed entries>" or "error <reason>". There is no
 // authentication: the channel is only ever a unix socket (control_socket),
 // readable and writable by its owner only.
+//
+// control_socket defaults to DefaultControlSocket, so a config needs no key for
+// it and stays loadable by builds without the control channel; set it to '' to
+// turn the channel off. A missing default directory only disables the channel.
+
+const DefaultControlSocket = "/run/dnscrypt/control.sock"
 
 const (
 	controlReadTimeout = 2 * time.Second
@@ -147,7 +153,7 @@ func readControlLine(r io.Reader) (string, error) {
 // cache, prints the reply and returns the exit code.
 func Flush(path string, arg string) int {
 	if path == "" {
-		fmt.Fprintln(os.Stderr, "control_socket is not set in the configuration file")
+		fmt.Fprintln(os.Stderr, "the control channel is turned off (control_socket = '')")
 		return 1
 	}
 	command := "flush " + arg

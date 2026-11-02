@@ -3,8 +3,11 @@ package main
 import (
 	"context"
 	"encoding/binary"
+	"errors"
+	"io/fs"
 	"net"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
@@ -286,7 +289,11 @@ func (proxy *Proxy) StartProxy() {
 
 	if proxy.controlSocket != "" {
 		if err := proxy.startControl(proxy.controlSocket); err != nil {
-			dlog.Errorf("Failed to start the control channel on %s: %v", proxy.controlSocket, err)
+			if proxy.controlSocket == DefaultControlSocket && errors.Is(err, fs.ErrNotExist) {
+				dlog.Noticef("Control channel off: %s does not exist", filepath.Dir(DefaultControlSocket))
+			} else {
+				dlog.Errorf("Failed to start the control channel on %s: %v", proxy.controlSocket, err)
+			}
 		}
 	}
 

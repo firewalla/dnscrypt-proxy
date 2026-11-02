@@ -517,6 +517,14 @@ cache_neg_min_ttl = 60
 
 cache_neg_max_ttl = 600
 
+## Unix socket for dropping names from the cache: one command per connection,
+## "flush <name>" or "flush_type <name> <type>". Also available from the
+## command line as `dnscrypt-proxy -config <file> -flush <name>[,<type>]`.
+## Readable and writable by the proxy's user only. If that directory does not
+## exist the channel stays off; set to '' to turn it off explicitly.
+
+# control_socket = '/run/dnscrypt/control.sock'
+
 
 ###############################################################################
 #                           Captive portal handling                            #
